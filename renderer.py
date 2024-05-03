@@ -65,8 +65,8 @@ class StyledText:
         tag_text: str = ""
         in_tag: bool = False
         
-        curr_x: int = 0
-        curr_y: int = 0
+        curr_x: int = self.padding[3]
+        curr_y: int = self.padding[0]
         largetst_y: int = 0
         
         for char in self.html_text:
@@ -93,17 +93,17 @@ class StyledText:
                     else:
                         tag_text += char
                 
-                # newline
-                elif char == '\n':
-                    # wrap text
-                    curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, 16, self.padding)
-                    largetst_y = 0
-                
                 else:
                     tag_text += char
                     
             # text
             else:
+                # newline
+                if char == '\n':
+                    # wrap text
+                    curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, 16, self.padding)
+                    largetst_y = 0
+                
                 new_char: pg.Surface = text_font.render(char, True, color, bg_color)
 
                 char_width: int = new_char.get_width()
