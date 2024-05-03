@@ -22,8 +22,17 @@ def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[boo
                 
     return (bold, italic, underline)
 
+def feed_line(current_x: int, current_y: int, line_size: int, default_line_size: int, padding: Tuple[int]) -> Tuple[int]:
+    if line_size == 0:
+        line_size = default_line_size
+
+    current_x = padding[3]
+    current_y += line_size + padding[0]
+
+    return(current_x, current_y)
+
 class StyledText:
-    def __init__(self, html_text: str, wrap_px: int, render_height: int, base_color: Tuple[int], background_color: Tuple[int], font_name: str, default_size: int, padding: int) -> None:
+    def __init__(self, html_text: str, wrap_px: int, render_height: int, base_color: Tuple[int], background_color: Tuple[int], font_name: str, default_size: int, padding: Tuple[int]) -> None:
         # setup variables
         self.html_text: str = html_text
         self.wrap_px: int = wrap_px
@@ -32,7 +41,7 @@ class StyledText:
         self.background_color: Tuple[int] = background_color
         self.font_name: str = font_name
         self.default_size: int = default_size
-        self.padding: int = padding
+        self.padding: Tuple[int] = padding # 0: top, 1: right, 2: bottom, 3: left
         
         # mutable variables
         self.rendered_text: pg.Surface = pg.Surface((self.wrap_px, self.render_height))
@@ -83,6 +92,13 @@ class StyledText:
                     if tag_text == "": continue
                     else:
                         tag_text += char
+                
+                # newline
+                elif char == '\n':
+                    # wrap text
+                    curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, 16, self.padding)
+                    largetst_y = 0
+                
                 else:
                     tag_text += char
                     
@@ -97,9 +113,9 @@ class StyledText:
                     largetst_y = char_height
                 
                 # text wrapping
-                if curr_x + char_width > self.wrap_px:
-                    curr_x = 0
-                    curr_y += largetst_y + self.padding
+                if curr_x + char_width > self.wrap_px - self.padding[1]:
+                    curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, char_height, self.padding)
+                    largetst_y = 0
                     
                 self.rendered_text.blit(new_char, (curr_x, curr_y))
 
