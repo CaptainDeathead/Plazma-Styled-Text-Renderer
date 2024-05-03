@@ -45,6 +45,7 @@ class StyledText:
         
         # mutable variables
         self.rendered_text: pg.Surface = pg.Surface((self.wrap_px, self.render_height))
+        self.rendered_text.fill((255, 255, 255))
         
     def render(self) -> pg.Surface:
         # clear the previous text
