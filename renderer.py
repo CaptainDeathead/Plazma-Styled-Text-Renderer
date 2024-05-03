@@ -29,7 +29,7 @@ def feed_line(current_x: int, current_y: int, line_size: int, default_line_size:
     current_x = padding[3]
     current_y += line_size + padding[0]
 
-    return(current_x, current_y)
+    return (current_x, current_y)
 
 class StyledText:
     def __init__(self, html_text: str, wrap_px: int, render_height: int, base_color: Tuple[int], background_color: Tuple[int], font_name: str, default_size: int, padding: Tuple[int]) -> None:
