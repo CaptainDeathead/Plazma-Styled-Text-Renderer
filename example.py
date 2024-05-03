@@ -8,10 +8,16 @@ pg.display.set_caption("Plazma Styled Text Renderer - Example")
 
 test1: str = "this is normal <b>and this is bold</b> <i>and this is italic</i> and of course <u>underline</u>"
 test2: str = "abcdefghijklmnopqrstuvwxyz"
-test3: str = "<b>i am not<i> and i am</i> and im not</b> and im neither"
+test3: str = """
+<h1>Example Domain</h1>
+
+<p>This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.</p>
+
+<p>More information...</p>
+"""
 
 # initialize the styled text class
-styled_text: StyledText = StyledText(test1, 800, 600, (0, 0, 0), (255, 255, 255), "Calibri", 16, (2, 20, 2, 20))
+styled_text: StyledText = StyledText(test3, 800, 600, (0, 0, 0), (255, 255, 255), "Calibri", 12, (2, 20, 2, 20))
 
 clock = pg.time.Clock()
 while 1:

@@ -116,6 +116,7 @@ class StyledText:
                 # text wrapping
                 if curr_x + char_width > self.wrap_px - self.padding[1]:
                     curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, char_height, self.padding)
+                    curr_x += 15 * (self.default_size / 16)
                     largetst_y = 0
                     
                 self.rendered_text.blit(new_char, (curr_x, curr_y))
