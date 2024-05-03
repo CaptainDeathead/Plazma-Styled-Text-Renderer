@@ -95,6 +95,10 @@ class StyledText:
                     curr_y += new_char.get_height() + self.padding
                     
                 self.rendered_text.blit(new_char, (curr_x, curr_y))
+
+                # underline
+                if underline:
+                    pg.draw.line(self.rendered_text, color, (curr_x, curr_y+new_char.get_height()), (curr_x+new_char.get_width(), curr_y+new_char.get_height()))
                     
                 curr_x += new_char.get_width() + 1
                 
