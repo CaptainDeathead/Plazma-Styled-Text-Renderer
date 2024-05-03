@@ -58,6 +58,7 @@ class StyledText:
         
         curr_x: int = 0
         curr_y: int = 0
+        largetst_y: int = 0
         
         for char in self.html_text:
             # entered tag
@@ -88,18 +89,24 @@ class StyledText:
             # text
             else:
                 new_char: pg.Surface = text_font.render(char, True, color, bg_color)
+
+                char_width: int = new_char.get_width()
+                char_height: int = new_char.get_height()
+
+                if char_height > largetst_y:
+                    largetst_y = char_height
                 
                 # text wrapping
-                if curr_x + new_char.get_width() > self.wrap_px:
+                if curr_x + char_width > self.wrap_px:
                     curr_x = 0
-                    curr_y += new_char.get_height() + self.padding
+                    curr_y += largetst_y + self.padding
                     
                 self.rendered_text.blit(new_char, (curr_x, curr_y))
 
                 # underline
                 if underline:
-                    pg.draw.line(self.rendered_text, color, (curr_x, curr_y+new_char.get_height()), (curr_x+new_char.get_width(), curr_y+new_char.get_height()))
+                    pg.draw.line(self.rendered_text, color, (curr_x, curr_y+char_height), (curr_x+char_width, curr_y+char_height))
                     
-                curr_x += new_char.get_width() + 1
+                curr_x += char_width + 1
                 
         return self.rendered_text
