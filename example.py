@@ -11,7 +11,7 @@ test2: str = "abcdefghijklmnopqrstuvwxyz"
 test3: str = "<b>i am not<i> and i am</i> and im not</b> and im neither"
 
 # initialize the styled text class
-styled_text: StyledText = StyledText(test1, 800, 600, (0, 0, 0), (255, 255, 255), "Calibri", 16, (2, 5, 2, 5))
+styled_text: StyledText = StyledText(test1, 800, 600, (0, 0, 0), (255, 255, 255), "Calibri", 16, (2, 20, 2, 20))
 
 clock = pg.time.Clock()
 while 1:
