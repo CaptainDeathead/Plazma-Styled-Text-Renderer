@@ -2,6 +2,8 @@ import pygame as pg
 from typing import Tuple, List
 
 def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[bool]:
+    line_break: bool = False
+
     # apply styles
     if tag in ("b", "strong"):
         bold = True
@@ -9,6 +11,8 @@ def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[boo
         italic = True
     elif tag == "u":
         underline = True
+    elif tag == "br/":
+        line_break = True
     else:
         # check if it is a closing tag
         if tag[0] == "/":
@@ -20,7 +24,7 @@ def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[boo
             elif tag == "/u":
                 underline = False
                 
-    return (bold, italic, underline)
+    return (bold, italic, underline, line_break)
 
 def feed_line(current_x: int, current_y: int, line_size: int, default_line_size: int, padding: Tuple[int]) -> Tuple[int]:
     if line_size == 0:
@@ -78,7 +82,12 @@ class StyledText:
             # exited tag
             elif char == '>':
                 # apply styles
-                bold, italic, underline = get_styles(tag_text, bold, italic, underline)
+                bold, italic, underline, line_break = get_styles(tag_text, bold, italic, underline)
+
+                # br tag
+                if line_break:
+                    curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, 16, self.padding)
+                    curr_x += 15 * (self.default_size / 16)
                 
                 # reload font with the new attributes
                 text_font = pg.font.SysFont(font_name, size, bold, italic)
