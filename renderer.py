@@ -29,6 +29,16 @@ def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[boo
                 
     return (bold, italic, underline, line_break)
 
+# TODO: Make this actually convert the units rather than replace the strings
+def remove_units(num_str: str) -> str:
+    return num_str.replace("cm", "").replace("mm", "").replace("in", "").replace("pc", "").replace("pt", "").replace("px", "")
+
+def add_style(style_with_value: Tuple[str, str], styles: Dict[str, any]) -> None:
+    style, value = style_with_value
+
+    if style == "font": styles["font"] = value
+    elif style == "font-size": styles["font-size"] = int(remove_units(value))
+
 def feed_line(current_x: int, current_y: int, line_size: int, default_line_size: int, padding: Tuple[int]) -> Tuple[int]:
     if line_size == 0:
         line_size = default_line_size
@@ -72,8 +82,12 @@ class StyledText:
     
     def renderText(self, html_text: str, tag_styles: Dict[str, any] = None):
         # styles
-        if tag_styles is None: styles = deepcopy(self.base_styles)
-        else: styles = tag_styles
+        styles = deepcopy(self.base_styles)
+
+        if tag_styles is not None:
+            for style in tag_styles:
+                add_style((style, tag_styles[style]), styles)
+                #styles[style] = tag_styles[style]
         
         text_font: pg.Font = pg.font.SysFont(styles['font'], styles['font-size'], styles['bold'], styles['italic'])
         
