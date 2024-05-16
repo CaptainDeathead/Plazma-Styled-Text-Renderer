@@ -1,7 +1,12 @@
 import pygame as pg
-from typing import Tuple, List
+import logging
+from typing import Tuple, Dict
+from copy import deepcopy
 
-def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[bool]:
+def get_styles(tag: str) -> Tuple[bool]:
+    bold: bool = False
+    italic: bool = False
+    underline: bool = False
     line_break: bool = False
 
     # apply styles
@@ -41,11 +46,18 @@ class StyledText:
         self.html_text: str = html_text
         self.wrap_px: int = wrap_px
         self.render_height: int = render_height
-        self.base_color: Tuple[int] = base_color
-        self.background_color: Tuple[int] = background_color
-        self.font_name: str = font_name
-        self.default_size: int = default_size
-        self.padding: Tuple[int] = padding # 0: top, 1: right, 2: bottom, 3: left
+
+        self.base_styles: Dict[str, any] = {
+            'color': base_color,
+            'background-color': background_color,
+            'font': font_name,
+            'font-size': default_size,
+            'padding': padding, # 0: top, 1: right, 2: bottom, 3: left
+
+            'bold': False,
+            'italic': False,
+            'underline': False,
+        }
         
         # mutable variables
         self.rendered_text: pg.Surface = pg.Surface((self.wrap_px, self.render_height))
@@ -53,25 +65,18 @@ class StyledText:
         
     def render(self) -> pg.Surface:
         # clear the previous text
-        self.rendered_text.fill(self.background_color)
+        self.rendered_text.fill(self.base_styles['background-color'])
         
         # styles
-        bold: bool = False
-        italic: bool = False
-        underline: bool = False
-        color: Tuple[int] = self.base_color
-        bg_color: Tuple[int] = self.background_color
-        font_name: str = self.font_name
-        size: int = self.default_size
+        styles = deepcopy(self.base_styles)
         
-        text_font: pg.Font = pg.font.SysFont(font_name, size, bold, italic)
+        text_font: pg.Font = pg.font.SysFont(styles['font'], styles['font-size'], styles['bold'], styles['italic'])
         
-        tag: str = ""
         tag_text: str = ""
         in_tag: bool = False
         
-        curr_x: int = self.padding[3]
-        curr_y: int = self.padding[0]
+        curr_x: int = styles['padding'][3]
+        curr_y: int = styles['padding'][0]
         largetst_y: int = 0
         
         for char in self.html_text:
@@ -82,17 +87,19 @@ class StyledText:
             # exited tag
             elif char == '>':
                 # apply styles
-                bold, italic, underline, line_break = get_styles(tag_text, bold, italic, underline)
+                styles['bold'], styles['italic'], styles['underline'], line_break = get_styles(tag_text)
 
                 # br tag
                 if line_break:
-                    curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, 16, self.padding)
-                    curr_x += 15 * (self.default_size / 16)
+                    curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, 16, styles['padding'])
+                    curr_x += 15 * (styles['font-size'] / 16)
                 
                 # reload font with the new attributes
-                text_font = pg.font.SysFont(font_name, size, bold, italic)
+                text_font = pg.font.SysFont(styles['font'], styles['font-size'], styles['bold'], styles['italic'])
                 
+                # reset tag vars
                 in_tag = False
+                
                 tag_text = ""
                 
             # in tag
@@ -102,7 +109,6 @@ class StyledText:
                     if tag_text == "": continue
                     else:
                         tag_text += char
-                
                 else:
                     tag_text += char
                     
@@ -111,10 +117,11 @@ class StyledText:
                 # newline
                 if char == '\n':
                     # wrap text
-                    curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, 16, self.padding)
+                    curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, 16, styles['padding'])
                     largetst_y = 0
                 
-                new_char: pg.Surface = text_font.render(char, True, color, bg_color)
+                try: new_char: pg.Surface = text_font.render(char, True, styles['color'], styles['background-color'])
+                except Exception as e: logging.warning(f"Error while creating character surface! Continuing anyway...    Error: '{str(e)}'")
 
                 char_width: int = new_char.get_width()
                 char_height: int = new_char.get_height()
@@ -123,16 +130,16 @@ class StyledText:
                     largetst_y = char_height
                 
                 # text wrapping
-                if curr_x + char_width > self.wrap_px - self.padding[1]:
-                    curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, char_height, self.padding)
-                    curr_x += 15 * (self.default_size / 16)
+                if curr_x + char_width > self.wrap_px - styles['padding'][1]:
+                    curr_x, curr_y = feed_line(curr_x, curr_y, largetst_y, char_height, styles['padding'])
+                    curr_x += 15 * (styles['font-size'] / 16)
                     largetst_y = 0
                     
                 self.rendered_text.blit(new_char, (curr_x, curr_y))
 
                 # underline
-                if underline:
-                    pg.draw.line(self.rendered_text, color, (curr_x, curr_y+char_height), (curr_x+char_width, curr_y+char_height))
+                if styles['underline']:
+                    pg.draw.line(self.rendered_text, styles['color'], (curr_x, curr_y+char_height), (curr_x+char_width, curr_y+char_height))
                     
                 curr_x += char_width + 1
                 
