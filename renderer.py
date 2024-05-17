@@ -78,11 +78,12 @@ class StyledText:
     def clear(self) -> pg.Surface:
         self.curr_x = self.base_styles["padding"][3]
         self.curr_y = self.base_styles["padding"][0]
+
         self.renderText('\n')
         self.rendered_text.fill(self.base_styles['background-color'])
         return self.rendered_text
     
-    def renderText(self, html_text: str, tag_styles: Dict[str, any] = None):
+    def renderText(self, html_text: str, tag_styles: Dict[str, any] = None) -> Tuple[float, float]:
         # styles
         styles = deepcopy(self.base_styles)
 
@@ -161,7 +162,7 @@ class StyledText:
                     
                 self.curr_x += char_width + 1
                 
-        return self.rendered_text
+        return self.curr_x, self.curr_y
 
     def renderAll(self) -> pg.Surface:
         warnings.warn("This function is inneficiant and outdated! Consider using 'renderText' instead.")
