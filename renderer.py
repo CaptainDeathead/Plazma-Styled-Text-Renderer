@@ -76,6 +76,8 @@ class StyledText:
         self.clear()
 
     def clear(self) -> pg.Surface:
+        self.curr_x = self.base_styles["padding"][3]
+        self.curr_y = self.base_styles["padding"][0]
         self.renderText('\n')
         self.rendered_text.fill(self.base_styles['background-color'])
         return self.rendered_text
