@@ -1,7 +1,7 @@
 import pygame as pg
 import logging
 import warnings
-from typing import Tuple, Dict
+from typing import List, Tuple, Dict
 from copy import deepcopy
 
 def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[bool]:
@@ -48,6 +48,27 @@ def feed_line(current_x: int, current_y: int, line_size: int, default_line_size:
 
     return (current_x, current_y)
 
+def surface_from_list(surface_list: List[pg.Surface]) -> pg.Surface:
+    size_x: float = 0.0
+    size_y: float = 0.0
+
+    surface_sizes: List[Tuple[float, float]] = []
+    
+    # pre-calculate the size of the new surface
+    for surface in surface_list:
+        surface_size = surface.get_size()
+
+        size_x += surface_size[0]
+        size_y += surface_size[1]
+        surface_sizes.append(surface_size)
+
+    new_surface: pg.Surface = pg.Surface((size_x, size_y))    
+
+    for i, surface in enumerate(surface_list):
+        new_surface.blit(surface, surface_sizes[i])
+
+    return new_surface
+
 class StyledText:
     def __init__(self, html_text: str, wrap_px: int, render_height: int, base_color: Tuple[int], background_color: Tuple[int], font_name: str, default_size: int, padding: Tuple[int]) -> None:
         # setup variables
@@ -83,7 +104,7 @@ class StyledText:
         self.rendered_text.fill(self.base_styles['background-color'])
         return self.rendered_text
     
-    def renderText(self, html_text: str, tag_styles: Dict[str, any] = None) -> Tuple[float, float]:
+    def renderText(self, html_text: str, tag_styles: Dict[str, any] = None) -> Tuple[pg.Surface, float, float]:
         # styles
         styles = deepcopy(self.base_styles)
 
@@ -96,6 +117,8 @@ class StyledText:
         
         tag_text: str = ""
         in_tag: bool = False
+
+        text_surfaces: List[pg.Surface] = []
         
         for char in html_text:
             # entered tag
@@ -139,7 +162,11 @@ class StyledText:
                     self.largest_y = 0
                 
                 try: new_char: pg.Surface = text_font.render(char, True, styles['color'], styles['background-color'])
-                except Exception as e: logging.warning(f"Error while creating character surface! Continuing anyway...    Error: '{str(e)}'")
+                except Exception as e:
+                    logging.warning(f"Error while creating character surface! Continuing anyway...    Error: '{str(e)}'")
+                    continue
+
+                text_surfaces.append(new_char)
 
                 char_width: int = new_char.get_width()
                 char_height: int = new_char.get_height()
@@ -162,7 +189,7 @@ class StyledText:
                     
                 self.curr_x += char_width + 1
                 
-        return self.curr_x, self.curr_y
+        return surface_from_list(text_surfaces), self.curr_x, self.curr_y
 
     def renderAll(self) -> pg.Surface:
         warnings.warn("This function is inneficiant and outdated! Consider using 'renderText' instead.")
