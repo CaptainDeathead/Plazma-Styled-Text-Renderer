@@ -104,7 +104,7 @@ class StyledText:
         self.rendered_text.fill(self.base_styles['background-color'])
         return self.rendered_text
     
-    def renderText(self, html_text: str, tag_styles: Dict[str, any] = None) -> Tuple[pg.Surface, float, float]:
+    def renderText(self, html_text: str, tag_styles: Dict[str, any] = None) -> pg.Rect:
         # styles
         styles = deepcopy(self.base_styles)
 
@@ -118,7 +118,7 @@ class StyledText:
         tag_text: str = ""
         in_tag: bool = False
 
-        text_surfaces: List[pg.Surface] = []
+        text_rects: List[pg.Rect] = []
         
         for char in html_text:
             # entered tag
@@ -166,7 +166,7 @@ class StyledText:
                     logging.warning(f"Error while creating character surface! Continuing anyway...    Error: '{str(e)}'")
                     continue
 
-                text_surfaces.append(new_char)
+                text_rects.append(new_char.get_rect())
 
                 char_width: int = new_char.get_width()
                 char_height: int = new_char.get_height()
@@ -189,7 +189,7 @@ class StyledText:
                     
                 self.curr_x += char_width + 1
                 
-        return surface_from_list(text_surfaces), self.curr_x, self.curr_y
+        return pg.Rect(text_rects[0].x, text_rects[0].y, self.wrap_px, text_rects[-1].y - text_rects[0].y)
 
     def renderAll(self) -> pg.Surface:
         warnings.warn("This function is inneficiant and outdated! Consider using 'renderText' instead.")
