@@ -3,6 +3,7 @@ import logging
 import warnings
 from typing import List, Tuple, Dict
 from copy import deepcopy
+from Engine.STR.font import FontManager
 
 def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[bool]:
     line_break: bool = False
@@ -76,6 +77,8 @@ class StyledText:
         self.wrap_px: int = wrap_px
         self.render_height: int = render_height
 
+        self.font_manager: FontManager = FontManager()
+
         self.base_styles: Dict[str, any] = {
             'color': base_color,
             'background-color': background_color,
@@ -103,7 +106,7 @@ class StyledText:
         self.renderText('\n')
         self.rendered_text.fill(self.base_styles['background-color'])
         return self.rendered_text
-    
+
     def renderText(self, html_text: str, tag_styles: Dict[str, any] = None) -> Tuple[pg.Rect, pg.Rect]:
         # styles
         styles = deepcopy(self.base_styles)
@@ -111,10 +114,12 @@ class StyledText:
         if tag_styles is not None:
             for style in tag_styles:
                 add_style((style, tag_styles[style]), styles)
-                #styles[style] = tag_styles[style]
         
-        text_font: pg.Font = pg.font.SysFont(styles['font'], styles['font-size'], styles['bold'], styles['italic'])
-        
+        #text_font: pg.Font = pg.font.SysFont(styles['font'], styles['font-size'], styles['bold'], styles['italic'])
+        text_font: pg.Font = self.font_manager.get_font(styles['font'], styles['font-size'])
+        text_font.set_bold(styles['bold'])
+        text_font.set_italic(styles['italic'])
+
         tag_text: str = ""
         in_tag: bool = False
 
@@ -136,7 +141,9 @@ class StyledText:
                     self.curr_x += 15 * (styles['font-size'] / 16)
                 
                 # reload font with the new attributes
-                text_font = pg.font.SysFont(styles['font'], styles['font-size'], styles['bold'], styles['italic'])
+                text_font = self.font_manager.get_font(styles['font'], styles['font-size'])
+                text_font.set_bold(styles['bold'])
+                text_font.set_italic(styles['italic'])
                 
                 # reset tag vars
                 in_tag = False
