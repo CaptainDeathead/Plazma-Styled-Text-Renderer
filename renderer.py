@@ -104,7 +104,7 @@ class StyledText:
         self.rendered_text.fill(self.base_styles['background-color'])
         return self.rendered_text
     
-    def renderText(self, html_text: str, tag_styles: Dict[str, any] = None) -> pg.Rect:
+    def renderText(self, html_text: str, tag_styles: Dict[str, any] = None) -> Tuple[pg.Rect, pg.Rect]:
         # styles
         styles = deepcopy(self.base_styles)
 
@@ -188,8 +188,13 @@ class StyledText:
                                  (self.curr_x+char_width, self.curr_y+char_height))
                     
                 self.curr_x += char_width + 1
+
+        total_rect: pg.Rect = pg.Rect(text_rects[0].x, text_rects[0].y, self.wrap_px, text_rects[-1].y - text_rects[0].y)
+
+        last_text_end: float = text_rects[-1].x+text_rects[-1].width
+        unused_rect: pg.Rect = pg.Rect(last_text_end, text_rects[-1].y, total_rect.width-last_text_end, self.largest_y)
                 
-        return pg.Rect(text_rects[0].x, text_rects[0].y, self.wrap_px, text_rects[-1].y - text_rects[0].y)
+        return total_rect, unused_rect
 
     def renderAll(self) -> pg.Surface:
         warnings.warn("This function is inneficiant and outdated! Consider using 'renderText' instead.")
