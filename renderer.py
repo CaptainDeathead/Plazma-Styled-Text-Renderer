@@ -104,11 +104,11 @@ class StyledText:
         self.curr_x = self.base_styles["padding"][3]
         self.curr_y = self.base_styles["padding"][0]
 
+        self.curr_screen = 0
         self.rendered_text_screens = [pg.Surface((self.wrap_px, self.render_height)), pg.Surface((self.wrap_px, self.render_height))]
         
         for screen in self.rendered_text_screens: screen.fill((255, 255, 255))
 
-        self.curr_screen = 0
         self.renderText('\n')
 
         return self.rendered_text_screens
@@ -192,14 +192,21 @@ class StyledText:
                     self.curr_x += 15 * (styles['font-size'] / 16)
                     self.largest_y = 0
                     
-                self.curr_screen = floor(self.curr_y / self.render_height)
+                self.curr_screen = floor((self.curr_y) / self.render_height)
+
+                if self.curr_screen != floor((self.curr_y+char_height) / self.render_height):
+                    self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, char_height, styles['padding'])
+                    self.curr_screen = floor((self.curr_y+char_height) / self.render_height)
 
                 if self.curr_screen > len(self.rendered_text_screens) - 1:
                     new_surf: pg.Surface = pg.Surface((self.wrap_px, self.render_height))
                     new_surf.fill((255, 255, 255))
                     self.rendered_text_screens.append(new_surf)
 
-                self.rendered_text_screens[self.curr_screen].blit(new_char, (self.curr_x, self.curr_y%self.render_height))
+                self.rendered_text_screens[self.curr_screen].blit(new_char, (self.curr_x, (self.curr_y%self.render_height)))
+
+                #if overlap:
+                #    self.rendered_text_screens[self.curr_screen-1].blit(new_char, (self.curr_x, self.curr_y%self.render_height-self.render_height))
 
                 # underline
                 if styles['underline']:
