@@ -4,6 +4,7 @@ from typing import List, Tuple, Dict
 from copy import deepcopy
 from Engine.STR.font import FontManager
 from math import floor
+from config import LINK_NORMAL_COLOR, PRESSED_LINK_COLOR
 
 def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[bool]:
     line_break: bool = False
@@ -32,13 +33,14 @@ def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[boo
 
 # TODO: Make this actually convert the units rather than replace the strings
 def remove_units(num_str: str) -> str:
-    return num_str.replace("cm", "").replace("mm", "").replace("in", "").replace("pc", "").replace("pt", "").replace("px", "")
+    return num_str.replace("cm", "").replace("mm", "").replace("in", "").replace("pc", "").replace("pt", "").replace("px", "").replace("%", "")
 
-def add_style(style_with_value: Tuple[str, str], styles: Dict[str, any]) -> None:
+def add_style(style_with_value: Tuple[str, str], styles: Dict[str, any]):
     style, value = style_with_value
 
     if style == "font": styles["font"] = value
     elif style == "font-size": styles["font-size"] = int(remove_units(value))
+    else: styles[style] = value
 
 def feed_line(current_x: int, current_y: int, line_size: int, default_line_size: int, padding: Tuple[int]) -> Tuple[int]:
     if line_size == 0:
@@ -89,6 +91,8 @@ class StyledText:
             'bold': False,
             'italic': False,
             'underline': False,
+
+            'link': False
         }
 
         self.curr_x: float = self.base_styles["padding"][3]
@@ -109,11 +113,11 @@ class StyledText:
         
         for screen in self.rendered_text_screens: screen.fill((255, 255, 255))
 
-        self.renderText('\n')
+        self.renderStyledText('\n')
 
         return self.rendered_text_screens
 
-    def renderText(self, html_text: str, tag_styles: Dict[str, any] = None) -> Tuple[pg.Rect, pg.Rect]:
+    def renderHTMLText(self, html_text: str, tag_styles: Dict[str, any] = None) -> Tuple[pg.Rect, pg.Rect]:
         # styles
         styles = deepcopy(self.base_styles)
 
@@ -205,15 +209,79 @@ class StyledText:
 
                 self.rendered_text_screens[self.curr_screen].blit(new_char, (self.curr_x, (self.curr_y%self.render_height)))
 
-                #if overlap:
-                #    self.rendered_text_screens[self.curr_screen-1].blit(new_char, (self.curr_x, self.curr_y%self.render_height-self.render_height))
-
                 # underline
                 if styles['underline']:
                     pg.draw.line(self.rendered_text_screens[self.curr_screen], styles['color'], (self.curr_x, self.curr_y+char_height),
                                  (self.curr_x+char_width, self.curr_y+char_height))
                     
                 self.curr_x += char_width + 1
+
+        total_rect: pg.Rect = pg.Rect(text_rects[0].x, text_rects[0].y, self.wrap_px, text_rects[-1].y - text_rects[0].y)
+
+        last_text_end: float = text_rects[-1].x+text_rects[-1].width
+        unused_rect: pg.Rect = pg.Rect(last_text_end, text_rects[-1].y, total_rect.width-last_text_end, self.largest_y)
+                
+        return total_rect, unused_rect
+    
+    def renderStyledText(self, text: str, tag_styles: Dict[str, any] = None) -> Tuple[pg.Rect, pg.Rect]:
+        # styles
+        styles = deepcopy(self.base_styles)
+
+        if tag_styles is not None:
+            for style in tag_styles:
+                add_style((style, tag_styles[style]), styles)
+
+        text_font: pg.Font = self.font_manager.get_font(styles['font'], styles['font-size'])
+        text_font.set_bold(styles['bold'])
+        text_font.set_italic(styles['italic'])
+
+        text_rects: List[pg.Rect] = []
+
+        for char in text:
+            # newline
+            if char == '\n':
+                # wrap text
+                self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, 16, styles['padding'])
+                self.largest_y = 0
+            
+            try: new_char: pg.Surface = text_font.render(char, True, styles['color'], styles['background-color'])
+            except Exception as e:
+                logging.warning(f"Error while creating character surface! Continuing anyway...    Error: '{str(e)}'")
+                continue
+
+            text_rects.append(new_char.get_rect())
+
+            char_width: int = new_char.get_width()
+            char_height: int = new_char.get_height()
+
+            if char_height > self.largest_y:
+                self.largest_y = char_height
+            
+            # text wrapping
+            if self.curr_x + char_width > self.wrap_px - styles['padding'][1]:
+                self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, char_height, styles['padding'])
+                self.curr_x += 15 * (styles['font-size'] / 16)
+                self.largest_y = 0
+                
+            self.curr_screen = floor((self.curr_y) / self.render_height)
+
+            if self.curr_screen != floor((self.curr_y+char_height) / self.render_height):
+                self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, char_height, styles['padding'])
+                self.curr_screen = floor((self.curr_y+char_height) / self.render_height)
+
+            if self.curr_screen > len(self.rendered_text_screens) - 1:
+                new_surf: pg.Surface = pg.Surface((self.wrap_px, self.render_height))
+                new_surf.fill((255, 255, 255))
+                self.rendered_text_screens.append(new_surf)
+
+            self.rendered_text_screens[self.curr_screen].blit(new_char, (self.curr_x, (self.curr_y%self.render_height)))
+
+            # underline
+            if styles['underline']:
+                pg.draw.line(self.rendered_text_screens[self.curr_screen], styles['color'], (self.curr_x, self.curr_y+char_height),
+                                (self.curr_x+char_width, self.curr_y+char_height))
+                
+            self.curr_x += char_width + 1
 
         total_rect: pg.Rect = pg.Rect(text_rects[0].x, text_rects[0].y, self.wrap_px, text_rects[-1].y - text_rects[0].y)
 
