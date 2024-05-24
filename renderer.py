@@ -31,15 +31,45 @@ def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[boo
                 
     return (bold, italic, underline, line_break)
 
-# TODO: Make this actually convert the units rather than replace the strings
-def remove_units(num_str: str) -> str:
-    return num_str.replace("cm", "").replace("mm", "").replace("in", "").replace("pc", "").replace("pt", "").replace("px", "").replace("%", "")
+def find_nums(string_with_nums: str) -> Tuple[float, str] | None:
+    for i in range(len(string_with_nums)):
+        if string_with_nums[i].isalpha() or string_with_nums[i] == '%':
+            return float(string_with_nums[:i]), string_with_nums[i:]
+
+    return None
+
+# TODO: Make this actually convert the units rather than replace the strings | Done!!
+def remove_units(num_str: str, tag_size: float, parent_size: float, view_width: float, view_height: float) -> float:
+    num_str = num_str.lower()
+
+    split_num: Tuple[float, str] | None = find_nums(num_str)
+
+    if split_num is None: return float(num_str)
+    
+    value, unit = split_num
+    
+    if unit == "cm": return value * 37.8
+    elif unit == "mm": return value * 3.78
+    elif unit == "q": return value * 0.945
+    elif unit == "in": return value * 96
+    elif unit == "pc": return value * 16
+    elif unit == "pt": return value * 1.333333
+    elif unit == "px": return value
+
+    # relative sizes
+    elif unit == "em": return value * parent_size
+    elif unit == "rem": return value * tag_size
+    elif unit == "vw": return view_width / value
+    elif unit == "vh": return view_height / value
+    elif unit == "%": return tag_size * value / 100
+    
+    return float(num_str)
 
 def add_style(style_with_value: Tuple[str, str], styles: Dict[str, any]):
     style, value = style_with_value
 
     if style == "font": styles["font"] = value
-    elif style == "font-size": styles["font-size"] = int(remove_units(value))
+    elif style == "font-size": styles["font-size"] = int(remove_units(value, styles["text-tag-size"], styles["parent-tag-size"], styles["view-width"], styles["view-height"]))
     else: styles[style] = value
 
 def feed_line(current_x: int, current_y: int, line_size: int, default_line_size: int, padding: Tuple[int]) -> Tuple[int]:
