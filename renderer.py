@@ -38,7 +38,6 @@ def find_nums(string_with_nums: str) -> Tuple[float, str] | None:
 
     return None
 
-# TODO: Make this actually convert the units rather than replace the strings | Done!!
 def remove_units(num_str: str, tag_size: float, parent_size: float, view_width: float, view_height: float) -> float:
     num_str = num_str.lower()
 
@@ -229,7 +228,8 @@ class StyledText:
                 self.curr_screen = floor((self.curr_y) / self.render_height)
 
                 if self.curr_screen != floor((self.curr_y+char_height) / self.render_height):
-                    self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, char_height, styles['padding'])
+                    #self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, char_height, styles['padding'])
+                    self.curr_y -= self.render_height
                     self.curr_screen = floor((self.curr_y+char_height) / self.render_height)
 
                 if self.curr_screen > len(self.rendered_text_screens) - 1:
