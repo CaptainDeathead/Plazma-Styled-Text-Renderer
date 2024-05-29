@@ -284,7 +284,9 @@ class StyledText:
                 logging.warning(f"Error while creating character surface! Continuing anyway...    Error: '{str(e)}'")
                 continue
 
-            text_rects.append(new_char.get_rect())
+            char_rect: pg.Rect = new_char.get_rect()
+
+            text_rects.append(pg.Rect(self.curr_x, self.curr_y, char_rect.width, char_rect.height))
 
             char_width: int = new_char.get_width()
             char_height: int = new_char.get_height()
@@ -319,9 +321,11 @@ class StyledText:
                 
             self.curr_x += char_width + 1
 
-        total_rect: pg.Rect = pg.Rect(text_rects[0].x, text_rects[0].y, self.wrap_px, text_rects[-1].y - text_rects[0].y)
+        sorted_text_rects_widths: List[pg.Rect] = sorted(text_rects, key=lambda rect: rect.x)
+
+        total_rect: pg.Rect = pg.Rect(text_rects[0].x, text_rects[0].y, sorted_text_rects_widths[-1].x + sorted_text_rects_widths[-1].width - sorted_text_rects_widths[0].x, text_rects[-1].y + text_rects[-1].height - text_rects[0].y)
 
         last_text_end: float = text_rects[-1].x+text_rects[-1].width
-        unused_rect: pg.Rect = pg.Rect(last_text_end, text_rects[-1].y, total_rect.width-last_text_end, self.largest_y)
+        unused_rect: pg.Rect = pg.Rect(last_text_end, text_rects[-1].y, total_rect.x + total_rect.width-last_text_end, text_rects[-1].height)
                 
         return total_rect, unused_rect
