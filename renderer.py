@@ -130,6 +130,9 @@ class StyledText:
         
         # mutable variables
         self.rendered_text_screens: List[pg.Surface] = [pg.Surface((self.wrap_px, self.render_height)), pg.Surface((self.wrap_px, self.render_height))]
+        
+        self.rendered_text: pg.Surface = pg.Surface((self.wrap_px, self.render_height))
+
         self.curr_screen: int = 0
         self.clear()
 
@@ -141,6 +144,8 @@ class StyledText:
         self.rendered_text_screens = [pg.Surface((self.wrap_px, self.render_height)), pg.Surface((self.wrap_px, self.render_height))]
         
         for screen in self.rendered_text_screens: screen.fill((255, 255, 255))
+
+        self.rendered_text.fill((255, 255, 255))
 
         self.renderStyledText('\n')
 
@@ -287,28 +292,29 @@ class StyledText:
             if char_height > self.largest_y:
                 self.largest_y = char_height
             
+            if self.curr_x + char_width > self.rendered_text.get_width():
+                resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width()+self.wrap_px, self.rendered_text.get_height()))
+                resized_rendered_text.fill((255, 255, 255))
+                resized_rendered_text.blit(self.rendered_text, (0, 0))
+                self.rendered_text = resized_rendered_text
+
+            elif self.curr_y + char_height > self.rendered_text.get_height():
+                resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width(), self.rendered_text.get_height()+self.render_height))
+                resized_rendered_text.fill((255, 255, 255))
+                resized_rendered_text.blit(self.rendered_text, (0, 0))
+                self.rendered_text = resized_rendered_text
+
             # text wrapping
-            if self.curr_x + char_width > self.wrap_px - styles['padding'][1]:
-                self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, char_height, styles['padding'])
-                self.curr_x += 15 * (styles['font-size'] / 16)
-                self.largest_y = 0
-                
-            self.curr_screen = floor((self.curr_y) / self.render_height)
-
-            if self.curr_screen != floor((self.curr_y+char_height) / self.render_height):
-                self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, char_height, styles['padding'])
-                self.curr_screen = floor((self.curr_y+char_height) / self.render_height)
-
-            if self.curr_screen > len(self.rendered_text_screens) - 1:
-                new_surf: pg.Surface = pg.Surface((self.wrap_px, self.render_height))
-                new_surf.fill((255, 255, 255))
-                self.rendered_text_screens.append(new_surf)
-
-            self.rendered_text_screens[self.curr_screen].blit(new_char, (self.curr_x, (self.curr_y%self.render_height)))
+            #if self.curr_x + char_width > self.wrap_px - styles['padding'][1]:
+            #    self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, char_height, styles['padding'])
+            #    self.curr_x += 15 * (styles['font-size'] / 16)
+            #    self.largest_y = 0
+            
+            self.rendered_text.blit(new_char, (self.curr_x, self.curr_y))
 
             # underline
             if styles['underline']:
-                pg.draw.line(self.rendered_text_screens[self.curr_screen], styles['color'], (self.curr_x, self.curr_y+char_height),
+                pg.draw.line(self.rendered_text, styles['color'], (self.curr_x, self.curr_y+char_height),
                                 (self.curr_x+char_width, self.curr_y+char_height))
                 
             self.curr_x += char_width + 1
