@@ -352,5 +352,5 @@ class StyledText:
 
         last_text_end: float = text_rects[-1].x+text_rects[-1].width
         unused_rect: pg.Rect = pg.Rect(last_text_end, text_rects[-1].y, total_rect.x + total_rect.width-last_text_end, text_rects[-1].height)
-                
+        
         return total_rect, unused_rect
