@@ -6,6 +6,20 @@ from Engine.STR.font import FontManager
 from math import floor
 from config import LINK_NORMAL_COLOR, PRESSED_LINK_COLOR
 
+def ishex(string: str) -> bool:
+    if "#" not in string: return False
+
+    try:
+        int(string.replace('#', ''), 16)
+        return True
+    except: return False
+
+def hex_to_rgb(hex_string: str) -> Tuple[int, int, int]:
+    if len(hex_string) < 7:
+        for _ in range(7-len(hex_string)): hex_string += "0"
+
+    return tuple(int(hex_string[i:i+2], 16) for i in range(1, 6, 2))
+
 def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[bool]:
     line_break: bool = False
 
@@ -34,16 +48,21 @@ def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[boo
 def find_nums(string_with_nums: str) -> Tuple[float, str] | None:
     for i in range(len(string_with_nums)):
         if string_with_nums[i].isalpha() or string_with_nums[i] == '%':
-            return float(string_with_nums[:i]), string_with_nums[i:]
+            if string_with_nums[:i] == '': return None
+
+            try: return float(string_with_nums[:i]), string_with_nums[i:]
+            except: return None
 
     return None
 
 def remove_units(num_str: str, tag_size: float, parent_size: float, view_width: float, view_height: float) -> float:
-    num_str = num_str.lower()
+    if type(num_str) == int or type(num_str) == float: return num_str
+
+    num_str = num_str.lower().split(' ')[0]
 
     split_num: Tuple[float, str] | None = find_nums(num_str)
 
-    if split_num is None: return float(num_str)
+    if split_num is None: return tag_size
     
     value, unit = split_num
     
@@ -62,13 +81,17 @@ def remove_units(num_str: str, tag_size: float, parent_size: float, view_width: 
     elif unit == "vh": return view_height / value
     elif unit == "%": return tag_size * value / 100
     
-    return float(num_str)
+    return tag_size
 
 def add_style(style_with_value: Tuple[str, str], styles: Dict[str, any]):
     style, value = style_with_value
 
     if style == "font": styles["font"] = value
-    elif style == "font-size": styles["font-size"] = int(remove_units(value, styles["text-tag-size"], styles["parent-tag-size"], styles["view-width"], styles["view-height"]))
+    elif style == "font-size": styles["font-size"] = int(remove_units(value, styles.get("text-tag-size", 16), styles.get("parent-tag-size", 16), styles["view-width"], styles["view-height"]))
+    elif style == "background-color" or style == "color" and (type(value) == tuple or type(value) == str):
+        if ishex(value): styles[style] = hex_to_rgb(value)
+        else: styles[style] = value
+
     else: styles[style] = value
 
 def feed_line(current_x: int, current_y: int, line_size: int, default_line_size: int, padding: Tuple[int]) -> Tuple[int]:
