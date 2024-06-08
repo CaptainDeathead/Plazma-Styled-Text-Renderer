@@ -145,6 +145,8 @@ class StyledText:
         
         for screen in self.rendered_text_screens: screen.fill((255, 255, 255))
 
+        self.rendered_text = pg.Surface((self.wrap_px, self.render_height))
+
         self.rendered_text.fill((255, 255, 255))
 
         self.renderStyledText('\n')
