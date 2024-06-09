@@ -125,11 +125,14 @@ def surface_from_list(surface_list: List[pg.Surface]) -> pg.Surface:
     return new_surface
 
 class StyledText:
-    def __init__(self, html_text: str, wrap_px: int, render_height: int, base_color: Tuple[int], background_color: Tuple[int], font_name: str, default_size: int, padding: Tuple[int]) -> None:
+    def __init__(self, html_text: str, wrap_px: int, render_height: int, base_color: Tuple[int], background_color: Tuple[int],
+                 font_name: str, default_size: int, padding: Tuple[int], resize_by_element_size: bool = False) -> None:
         # setup variables
         self.html_text: str = html_text
         self.wrap_px: int = wrap_px
         self.render_height: int = render_height
+
+        self.resize_by_element_size: bool = resize_by_element_size
 
         self.font_manager: FontManager = FontManager()
 
@@ -150,10 +153,7 @@ class StyledText:
         self.curr_x: float = self.base_styles["padding"][3]
         self.curr_y: float = self.base_styles["padding"][0]
         self.largest_y: float = 0
-        
-        # mutable variables
-        self.rendered_text_screens: List[pg.Surface] = [pg.Surface((self.wrap_px, self.render_height)), pg.Surface((self.wrap_px, self.render_height))]
-        
+                
         self.rendered_text: pg.Surface = pg.Surface((self.wrap_px, self.render_height))
 
         self.curr_screen: int = 0
@@ -175,113 +175,6 @@ class StyledText:
         self.renderStyledText('\n')
 
         return self.rendered_text_screens
-
-    def renderHTMLText(self, html_text: str, tag_styles: Dict[str, any] = None) -> Tuple[pg.Rect, pg.Rect]:
-        # styles
-        styles = deepcopy(self.base_styles)
-
-        if tag_styles is not None:
-            for style in tag_styles:
-                add_style((style, tag_styles[style]), styles)
-        
-        text_font: pg.Font = self.font_manager.get_font(styles['font'], styles['font-size'])
-        text_font.set_bold(styles['bold'])
-        text_font.set_italic(styles['italic'])
-
-        tag_text: str = ""
-        in_tag: bool = False
-
-        text_rects: List[pg.Rect] = []
-        
-        for char in html_text:
-            # entered tag
-            if char == '<':
-                in_tag = True
-                
-            # exited tag
-            elif char == '>':
-                # apply styles
-                styles['bold'], styles['italic'], styles['underline'], line_break = get_styles(tag_text, styles['bold'], styles['italic'], styles['underline'])
-
-                # br tag
-                if line_break:
-                    self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, 16, styles['padding'])
-                    self.curr_x += 15 * (styles['font-size'] / 16)
-                
-                # reload font with the new attributes
-                text_font = self.font_manager.get_font(styles['font'], styles['font-size'])
-                text_font.set_bold(styles['bold'])
-                text_font.set_italic(styles['italic'])
-                
-                # reset tag vars
-                in_tag = False
-                
-                tag_text = ""
-                
-            # in tag
-            elif in_tag:
-                if char == " ":
-                    # check for whitespace at the start
-                    if tag_text == "": continue
-                    else:
-                        tag_text += char
-                else:
-                    tag_text += char
-                    
-            # text
-            else:
-                # newline
-                if char == '\n':
-                    # wrap text
-                    self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, 16, styles['padding'])
-                    self.largest_y = 0
-                
-                try: new_char: pg.Surface = text_font.render(char, True, styles['color'], styles['background-color'])
-                except Exception as e:
-                    logging.warning(f"Error while creating character surface! Continuing anyway...    Error: '{str(e)}'")
-                    continue
-
-                text_rects.append(new_char.get_rect())
-
-                char_width: int = new_char.get_width()
-                char_height: int = new_char.get_height()
-
-                if char_height > self.largest_y:
-                    self.largest_y = char_height
-                
-                # text wrapping
-                if self.curr_x + char_width > self.wrap_px - styles['padding'][1]:
-                    self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, char_height, styles['padding'])
-                    self.curr_x += 15 * (styles['font-size'] / 16)
-                    self.largest_y = 0
-                    
-                self.curr_screen = floor((self.curr_y) / self.render_height)
-
-                if self.curr_screen != floor((self.curr_y+char_height) / self.render_height):
-                    #self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, char_height, styles['padding'])
-                    self.curr_y -= self.render_height
-                    self.curr_screen = floor((self.curr_y+char_height) / self.render_height)
-
-                if self.curr_screen > len(self.rendered_text_screens) - 1:
-                    new_surf: pg.Surface = pg.Surface((self.wrap_px, self.render_height))
-                    new_surf.fill((255, 255, 255))
-                    self.rendered_text_screens.append(new_surf)
-
-                self.rendered_text_screens[self.curr_screen].blit(new_char, (self.curr_x, (self.curr_y%self.render_height)))
-
-                # underline
-                if styles['underline']:
-                    pg.draw.line(self.rendered_text_screens[self.curr_screen], styles['color'], (self.curr_x, self.curr_y+char_height),
-                                 (self.curr_x+char_width, self.curr_y+char_height))
-                    
-                self.curr_x += char_width + 1
-
-        total_rect: pg.Rect = pg.Rect(text_rects[0].x, text_rects[0].y, self.wrap_px, text_rects[-1].y - text_rects[0].y)
-
-        last_text_end: float = text_rects[-1].x+text_rects[-1].width
-        unused_rect: pg.Rect = pg.Rect(last_text_end, text_rects[-1].y, total_rect.width-last_text_end, self.largest_y)
-                
-        return total_rect, unused_rect
     
     def renderStyledText(self, text: str, tag_styles: Dict[str, any] = None) -> Tuple[pg.Rect, pg.Rect]:
         # styles
@@ -320,13 +213,21 @@ class StyledText:
                 self.largest_y = char_height
             
             if self.curr_x + char_width > self.rendered_text.get_width():
-                resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width()+self.wrap_px, self.rendered_text.get_height()))
+                if self.resize_by_element_size:
+                    resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width()+char_width, self.rendered_text.get_height()))
+                else:
+                    resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width()+self.wrap_px, self.rendered_text.get_height()))
+                
                 resized_rendered_text.fill((255, 255, 255))
                 resized_rendered_text.blit(self.rendered_text, (0, 0))
                 self.rendered_text = resized_rendered_text
 
             elif self.curr_y + char_height > self.rendered_text.get_height():
-                resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width(), self.rendered_text.get_height()+self.render_height))
+                if self.resize_by_element_size:
+                    resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width(), self.rendered_text.get_height()+char_height))
+                else:
+                    resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width(), self.rendered_text.get_height()+self.render_height))
+
                 resized_rendered_text.fill((255, 255, 255))
                 resized_rendered_text.blit(self.rendered_text, (0, 0))
                 self.rendered_text = resized_rendered_text
