@@ -1,5 +1,6 @@
 import pygame as pg
 import logging
+import time
 from typing import List, Tuple, Dict
 from copy import deepcopy
 from Engine.STR.font import FontManager
@@ -126,13 +127,14 @@ def surface_from_list(surface_list: List[pg.Surface]) -> pg.Surface:
 
 class StyledText:
     def __init__(self, html_text: str, wrap_px: int, render_height: int, base_color: Tuple[int], background_color: Tuple[int],
-                 font_name: str, default_size: int, padding: Tuple[int], resize_by_element_size: bool = False) -> None:
+                 font_name: str, default_size: int, padding: Tuple[int], screenshot_saver: bool = False) -> None:
+        
         # setup variables
         self.html_text: str = html_text
         self.wrap_px: int = wrap_px
         self.render_height: int = render_height
 
-        self.resize_by_element_size: bool = resize_by_element_size
+        self.screenshot_saver: bool = screenshot_saver
 
         self.font_manager: FontManager = FontManager()
 
@@ -150,31 +152,23 @@ class StyledText:
             'link': False
         }
 
-        self.curr_x: float = self.base_styles["padding"][3]
-        self.curr_y: float = self.base_styles["padding"][0]
+        self.total_x: float = self.base_styles["padding"][3]
+        self.total_y: float = self.base_styles["padding"][0]
         self.largest_y: float = 0
-                
+        
+        # mutable variables     
         self.rendered_text: pg.Surface = pg.Surface((self.wrap_px, self.render_height))
 
-        self.curr_screen: int = 0
         self.clear()
 
-    def clear(self) -> List[pg.Surface]:
-        self.curr_x = self.base_styles["padding"][3]
-        self.curr_y = self.base_styles["padding"][0]
-
-        self.curr_screen = 0
-        self.rendered_text_screens = [pg.Surface((self.wrap_px, self.render_height)), pg.Surface((self.wrap_px, self.render_height))]
-        
-        for screen in self.rendered_text_screens: screen.fill((255, 255, 255))
+    def clear(self) -> None:
+        self.total_x = self.base_styles["padding"][3]
+        self.total_y = self.base_styles["padding"][0]
 
         self.rendered_text = pg.Surface((self.wrap_px, self.render_height))
 
         self.rendered_text.fill((255, 255, 255))
-
         self.renderStyledText('\n')
-
-        return self.rendered_text_screens
     
     def renderStyledText(self, text: str, tag_styles: Dict[str, any] = None) -> Tuple[pg.Rect, pg.Rect]:
         # styles
@@ -194,7 +188,7 @@ class StyledText:
             # newline
             if char == '\n':
                 # wrap text
-                self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, 16, styles['padding'])
+                self.total_x, self.total_y = feed_line(self.total_x, self.total_y, self.largest_y, 16, styles['padding'])
                 self.largest_y = 0
             
             try: new_char: pg.Surface = text_font.render(char, True, styles['color'], styles['background-color'])
@@ -204,7 +198,7 @@ class StyledText:
 
             char_rect: pg.Rect = new_char.get_rect()
 
-            text_rects.append(pg.Rect(self.curr_x, self.curr_y, char_rect.width, char_rect.height))
+            text_rects.append(pg.Rect(self.total_x, self.total_y, char_rect.width, char_rect.height))
 
             char_width: int = new_char.get_width()
             char_height: int = new_char.get_height()
@@ -212,40 +206,34 @@ class StyledText:
             if char_height > self.largest_y:
                 self.largest_y = char_height
             
-            if self.curr_x + char_width > self.rendered_text.get_width():
-                if self.resize_by_element_size:
-                    resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width()+char_width, self.rendered_text.get_height()))
-                else:
-                    resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width()+self.wrap_px, self.rendered_text.get_height()))
-                
+            if self.total_x + char_width > self.rendered_text.get_width():
+                resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width()+self.wrap_px, self.rendered_text.get_height()))
                 resized_rendered_text.fill((255, 255, 255))
                 resized_rendered_text.blit(self.rendered_text, (0, 0))
                 self.rendered_text = resized_rendered_text
 
-            elif self.curr_y + char_height > self.rendered_text.get_height():
-                if self.resize_by_element_size:
-                    resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width(), self.rendered_text.get_height()+char_height))
-                else:
-                    resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width(), self.rendered_text.get_height()+self.render_height))
-
+            elif self.total_y + char_height > self.rendered_text.get_height():
+                resized_rendered_text: pg.Surface = pg.Surface((self.rendered_text.get_width(), self.rendered_text.get_height()+self.render_height))
                 resized_rendered_text.fill((255, 255, 255))
                 resized_rendered_text.blit(self.rendered_text, (0, 0))
                 self.rendered_text = resized_rendered_text
 
             # text wrapping
-            #if self.curr_x + char_width > self.wrap_px - styles['padding'][1]:
-            #    self.curr_x, self.curr_y = feed_line(self.curr_x, self.curr_y, self.largest_y, char_height, styles['padding'])
-            #    self.curr_x += 15 * (styles['font-size'] / 16)
+            #if self.total_x + char_width > self.wrap_px - styles['padding'][1]:
+            #    self.total_x, self.total_y = feed_line(self.total_x, self.total_y, self.largest_y, char_height, styles['padding'])
+            #    self.total_x += 15 * (styles['font-size'] / 16)
             #    self.largest_y = 0
             
-            self.rendered_text.blit(new_char, (self.curr_x, self.curr_y))
+            self.rendered_text.blit(new_char, (self.total_x, self.total_y))
 
             # underline
             if styles['underline']:
-                pg.draw.line(self.rendered_text, styles['color'], (self.curr_x, self.curr_y+char_height),
-                                (self.curr_x+char_width, self.curr_y+char_height))
+                pg.draw.line(self.rendered_text, styles['color'], (self.total_x, self.total_y+char_height),
+                                (self.total_x+char_width, self.total_y+char_height))
                 
-            self.curr_x += char_width + 1
+            self.total_x += char_width + 1
+
+        if self.screenshot_saver: pg.image.save(self.rendered_text, "screenshots/" + str(time.time()) + ".png")
 
         sorted_text_rects_widths: List[pg.Rect] = sorted(text_rects, key=lambda rect: rect.x)
 
