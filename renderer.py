@@ -46,6 +46,16 @@ def get_styles(tag: str, bold: bool, italic: bool, underline: bool) -> Tuple[boo
                 
     return (bold, italic, underline, line_break)
 
+def convert_keywords(string: str) -> Tuple[float, str] | None:
+    if string == "xx-small": return (0.5625, "rem")
+    elif string == "x-small": return (0.625, "rem")
+    elif string == "small": return (0.8125, "rem")
+    elif string == "medium": return (1.0, "rem")
+    elif string == "large": return (1.125, "rem")
+    elif string == "x-large": return (1.5, "rem")
+    elif string == "xx-large": return (2.0, "rem")
+    else: return None
+
 def find_nums(string_with_nums: str) -> Tuple[float, str] | None:
     for i in range(len(string_with_nums)):
         if string_with_nums[i].isalpha() or string_with_nums[i] == '%':
@@ -54,7 +64,7 @@ def find_nums(string_with_nums: str) -> Tuple[float, str] | None:
             try: return float(string_with_nums[:i]), string_with_nums[i:]
             except: return None
 
-    return None
+    return convert_keywords(string_with_nums)
 
 def remove_units(num_str: str, tag_size: float, parent_size: float, view_width: float, view_height: float) -> float:
     if type(num_str) == int or type(num_str) == float: return num_str
@@ -63,7 +73,9 @@ def remove_units(num_str: str, tag_size: float, parent_size: float, view_width: 
 
     split_num: Tuple[float, str] | None = find_nums(num_str)
 
-    if split_num is None: return tag_size
+    if split_num is None: 
+        if type(tag_size) == str: return 16
+        else: return tag_size
     
     value, unit = split_num
     
@@ -80,9 +92,13 @@ def remove_units(num_str: str, tag_size: float, parent_size: float, view_width: 
     elif unit == "rem": return value * tag_size
     elif unit == "vw": return view_width / value
     elif unit == "vh": return view_height / value
-    elif unit == "%": return tag_size * value / 100
-    
-    return tag_size
+    elif unit == "%":
+        if type(tag_size) == str: return 16
+        return tag_size * value / 100
+
+    # Style not found    
+    if type(tag_size) == str: return 16
+    else: return tag_size
 
 def add_style(style_with_value: Tuple[str, str], styles: Dict[str, any]):
     style, value = style_with_value
@@ -237,7 +253,10 @@ class StyledText:
 
         sorted_text_rects_widths: List[pg.Rect] = sorted(text_rects, key=lambda rect: rect.x)
 
-        total_rect: pg.Rect = pg.Rect(text_rects[0].x, text_rects[0].y, sorted_text_rects_widths[-1].x + sorted_text_rects_widths[-1].width - sorted_text_rects_widths[0].x, text_rects[-1].y + text_rects[-1].height - text_rects[0].y)
+        try: total_rect: pg.Rect = pg.Rect(text_rects[0].x, text_rects[0].y, sorted_text_rects_widths[-1].x + sorted_text_rects_widths[-1].width - sorted_text_rects_widths[0].x, text_rects[-1].y + text_rects[-1].height - text_rects[0].y)
+        except Exception as e:
+            logging.warning(f"Error while creating character rect! Continuing anyway...    Error: '{str(e)}'")
+            return pg.Rect(0, 0, 0, 0), pg.Rect(0, 0, 0, 0)
 
         last_text_end: float = text_rects[-1].x+text_rects[-1].width
         unused_rect: pg.Rect = pg.Rect(last_text_end, text_rects[-1].y, total_rect.x + total_rect.width-last_text_end, text_rects[-1].height)
