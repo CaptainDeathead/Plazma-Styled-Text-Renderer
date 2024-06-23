@@ -15,7 +15,9 @@ class Updater:
 
     RAW_GITHUB_BASE_URL: str = "https://raw.githubusercontent.com/CaptainDeathead/Plazma-Styled-Text-Renderer/main"
 
-    def __init__(self) -> None:
+    def __init__(self, custom_path: str = "") -> None:
+        if custom_path != "": self.PATH = custom_path
+
         self.load_installed()
         self.get_latest_changes()
         self.download_and_install()
@@ -133,8 +135,8 @@ class Updater:
 
         print(f"\n{len(self.online_files)} files have been installed over {len(self.installed_files)} files.\nAll updates complete.")
 
-def main() -> None:
-    updater: Updater = Updater()
+def main(custom_path: str = "") -> None:
+    updater: Updater = Updater(custom_path)
 
 if __name__ == "__main__":
     main()
