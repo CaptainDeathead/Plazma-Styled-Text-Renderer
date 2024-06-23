@@ -16,7 +16,7 @@ class Updater:
     RAW_GITHUB_BASE_URL: str = "https://raw.githubusercontent.com/CaptainDeathead/Plazma-Styled-Text-Renderer/main"
 
     def __init__(self, custom_path: str = "") -> None:
-        if custom_path != "": self.PATH = custom_path
+        if custom_path != "": self.PATH += custom_path
 
         self.load_installed()
         self.get_latest_changes()
